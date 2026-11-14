@@ -22,7 +22,8 @@ export const DEFAULT_ACCENT = '#8b2f4b';
 
 export const DEFAULT_PRIVACY =
   'Usamos seu nome e telefone apenas para registrar e confirmar seu horário e para falar com você sobre ele. ' +
-  'Não compartilhamos seus dados com terceiros. Para corrigir ou apagar seus dados, fale com o estabelecimento.';
+  'Não vendemos nem compartilhamos seus dados; eles só passam pelos serviços que fazem o sistema funcionar ' +
+  '(hospedagem e aviso por e-mail ao estabelecimento). Para corrigir ou apagar seus dados, fale com o estabelecimento.';
 
 export function defaultSettings() {
   const weekday = () => ({ open: true, periods: [{ s: 540, e: 720 }, { s: 780, e: 1080 }] });

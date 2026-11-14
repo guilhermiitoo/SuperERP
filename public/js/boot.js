@@ -29,6 +29,16 @@ async function serverClock() {
   return () => Date.now();
 }
 
+/** Liga o aviso por e-mail se a instalação configurou o EmailJS. */
+export async function setupNotifier(settings) {
+  if (!config.avisoEmail?.serviceId || !settings) return;
+  const { createEmailNotifier, setNotifier } = await import('./core/notify.js');
+  setNotifier(createEmailNotifier({
+    config: config.avisoEmail,
+    ctx: { business: settings.business, offsetMin: settings.utcOffsetMin, panelUrl: new URL('./painel.html', location.href).href },
+  }));
+}
+
 export async function createAppStore() {
   if (!isDemo) {
     const [{ initializeApp }, fs, { createFirebaseStore }, now] = await Promise.all([

@@ -75,7 +75,7 @@ test('.ics: solicitação pendente entra como provisória', () => {
   assert.match(buildIcs({ ...booking, status: 'pending' }, { ...ctx, nowMs: 0 }), /STATUS:TENTATIVE\r\n/);
 });
 
-test('automação de mensagens vem desativada e nunca afirma ter enviado', async () => {
+test('sem configuração, o aviso vem desativado e nunca afirma ter enviado', async () => {
   assert.equal(notifier.enabled, false);
   assert.deepEqual(await notifier.notify('booking_created', booking), { status: 'disabled' });
 });

@@ -72,6 +72,7 @@ navegador (Playwright/Chromium). Resultados registrados em [docs/TESTES.md](docs
 
 - [docs/PLANO.md](docs/PLANO.md) — escopo, decisões técnicas e etapas
 - [docs/REGRAS.md](docs/REGRAS.md) — regras de negócio (estados, disponibilidade, concorrência, privacidade, exportação)
+- [docs/ENTREGA.md](docs/ENTREGA.md) — **roteiro de entrega**: conta do negócio, aviso por e-mail grátis, WhatsApp Business
 - [docs/INSTALACAO.md](docs/INSTALACAO.md) — criar o projeto Firebase, publicar, criar a conta da proprietária
 - [docs/PILOTO-MANICURE.md](docs/PILOTO-MANICURE.md) — configuração e roteiro do primeiro cliente
 - [docs/CUSTOS.md](docs/CUSTOS.md) — cotas gratuitas, o que exige faturamento, limitações

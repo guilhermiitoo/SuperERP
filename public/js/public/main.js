@@ -1,7 +1,7 @@
 // Área pública: a cliente escolhe serviço, dia e horário, informa nome e telefone e confirma.
 // Nada é mostrado como reservado antes de o servidor gravar.
 
-import { createAppStore, isDemo } from '../boot.js';
+import { createAppStore, isDemo, setupNotifier } from '../boot.js';
 import { h, mount, field, busy, downloadText, copyText } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { leaf } from '../ui/leaf.js';
@@ -15,7 +15,7 @@ import { canCustomerCancel, canCustomerReschedule } from '../core/booking.js';
 import { normalizeName, normalizePhone, fmtPhone } from '../core/validate.js';
 import { waLink, messageFor } from '../core/whatsapp.js';
 import { buildIcs } from '../core/ics.js';
-import { notifier } from '../core/notify.js';
+import * as notify from '../core/notify.js';
 
 const app = document.getElementById('app');
 let store;
@@ -190,7 +190,7 @@ function viewDetails() {
         const b = await store.createBooking({ serviceId: s.id, day: flow.day, start: flow.start, customer: { name: cleanName, phone: cleanPhone } });
         flow.booking = b;
         countHere();
-        notifier.notify(b.status === 'pending' ? 'booking_pending' : 'booking_created', b);
+        notify.notifier.notify(b.status === 'pending' ? 'booking_pending' : 'booking_created', b);
         Object.assign(flow, { start: null, notice: null, after: 'created' });
         location.hash = `#/r/${b.token}`;
       });
@@ -364,7 +364,7 @@ function reschedule(b) {
       try {
         flow.booking = await store.rescheduleBooking(b.token, { day: p.day, start: p.start }, 'customer');
         flow.after = 'rescheduled';
-        notifier.notify('booking_rescheduled', flow.booking);
+        notify.notifier.notify('booking_rescheduled', flow.booking);
         sheet.close();
         bookingView(flow.booking);
         focusTop();
@@ -383,7 +383,7 @@ async function cancel(b) {
   try {
     flow.booking = await store.cancelBooking(b.token, 'customer');
     flow.after = 'cancelled';
-    notifier.notify('booking_cancelled', flow.booking);
+    notify.notifier.notify('booking_cancelled', flow.booking);
     bookingView(flow.booking);
     focusTop();
   } catch (err) {
@@ -418,6 +418,7 @@ async function start() {
   try {
     store = await createAppStore();
     await loadBusiness();
+    await setupNotifier(settings);
   } catch (err) {
     startFailure(app, err, () => location.reload(), 'Conecte-se à internet para ver os serviços e horários.');
     return;

@@ -20,7 +20,13 @@ Os textos ficam em `public/js/core/whatsapp.js` e têm testes em `tests/unit/ext
 Não usamos automação do WhatsApp Web nem qualquer ferramenta não oficial: elas violam os termos do
 WhatsApp e podem bloquear o número do negócio.
 
-## Ponto de integração já preparado (desativado)
+## Aviso por e-mail para a profissional (gratuito)
+
+Cada reserva, remarcação ou cancelamento feito pelo link pode enviar um e-mail para a profissional pelo
+EmailJS (plano grátis). Configuração em [ENTREGA.md](ENTREGA.md). Desligado enquanto `avisoEmail` em
+`public/config.js` estiver vazio.
+
+## Ponto de integração
 
 `public/js/core/notify.js` é o único lugar que as telas chamam quando algo acontece
 (`booking_created`, `booking_pending`, `booking_rescheduled`, `booking_cancelled`…). Hoje ele devolve

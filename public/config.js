@@ -17,6 +17,14 @@ export default {
     appId: '',
   },
 
+  // Opcional e gratuito: e-mail para a profissional a cada reserva, remarcação ou cancelamento pelo link.
+  // Preencha com os dados da conta EmailJS dela (passo a passo em docs/ENTREGA.md). Vazio = desligado.
+  avisoEmail: {
+    serviceId: '',
+    templateId: '',
+    publicKey: '',
+  },
+
   // Opcional: chave pública do reCAPTCHA v3 para o Firebase App Check (docs/INSTALACAO.md).
   appCheckSiteKey: '',
 
