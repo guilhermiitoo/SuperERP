@@ -1,0 +1,74 @@
+/* Agenda Base — fundamentos visuais.
+   Direção "folhinha": papel claro levemente rosado, tinta quase preta, um bordô de esmalte como
+   única cor de marca. Datas e horas em numerais condensados e pesados. Linhas finas, sem sombras.
+   A cor principal (--accent) é trocada por instalação em js/core/theme.js. */
+
+@font-face {
+  font-family: 'Sofia Sans';
+  src: url('../vendor/fonts/sofia-sans-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 1 1000; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  src: url('../vendor/fonts/sofia-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  font-weight: 1 1000; font-style: normal; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113;
+}
+@font-face {
+  font-family: 'Sofia Sans Condensed';
+  src: url('../vendor/fonts/sofia-sans-condensed-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 1 1000; font-style: normal; font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* papel e tinta: neutros puxados para o matiz do destaque */
+  --paper: oklch(97.6% 0.006 15);
+  --surface: oklch(99.6% 0.002 15);
+  --sunken: oklch(95.2% 0.009 15);
+  --ink: oklch(24% 0.022 12);
+  --ink-2: oklch(42% 0.022 12);
+  --ink-3: oklch(51% 0.02 12);
+  --line: oklch(90% 0.012 15);
+  --line-strong: oklch(78% 0.02 15);
+
+  /* marca: definido por instalação */
+  --accent: #8b2f4b;
+  --on-accent: #ffffff;
+  --accent-text: #8b2f4b;
+  --accent-soft: color-mix(in oklch, var(--accent) 9%, var(--surface));
+  --accent-line: color-mix(in oklch, var(--accent) 32%, var(--surface));
+
+  /* estados: só onde carregam significado */
+  --ok: oklch(43% 0.1 155);
+  --ok-soft: oklch(95.5% 0.035 155);
+  --ok-line: oklch(84% 0.06 155);
+  --warn: oklch(45% 0.1 65);
+  --warn-soft: oklch(95.5% 0.045 85);
+  --warn-line: oklch(83% 0.09 85);
+  --danger: oklch(47% 0.16 27);
+  --danger-soft: oklch(96% 0.025 27);
+  --danger-line: oklch(84% 0.07 27);
+
+  --font: 'Sofia Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Sofia Sans Condensed', 'Sofia Sans', system-ui, sans-serif;
+
+  --t-xs: 0.8125rem;   /* 13 */
+  --t-sm: 0.9375rem;   /* 15 */
+  --t-md: 1.0625rem;   /* 17: corpo */
+  --t-lg: 1.25rem;     /* 20 */
+  --t-xl: 1.625rem;    /* 26 */
+  --t-2xl: 2.125rem;   /* 34 */
+
+  --s-1: 0.25rem; --s-2: 0.5rem; --s-3: 0.75rem; --s-4: 1rem; --s-5: 1.5rem; --s-6: 2rem; --s-7: 3rem;
+
+  --r-sm: 4px;
+  --r-md: 7px;
+  --r-lg: 12px;
+
+  --tap: 3rem; /* alvo de toque mínimo */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --page: 35rem;
+}

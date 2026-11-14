@@ -1,0 +1,2 @@
+firebase 12.19.0
+Sofia Sans / Sofia Sans Condensed (SIL Open Font License 1.1), via @fontsource-variable
