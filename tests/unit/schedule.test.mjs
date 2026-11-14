@@ -104,11 +104,16 @@ test('listSlots oferece inícios no passo configurado, independente da duração
   assert.deepEqual(labels(listSlots(dayDoc(step15), svc(), ctx({ settings: step15 }))).slice(0, 3), ['09:00', '09:15', '09:30']);
 });
 
-test('listSlots encosta uma opção logo depois de uma reserva existente', () => {
+test('listSlots encosta uma opção logo depois de uma reserva quando isso evita um buraco de 15 min ou mais', () => {
   const d = dayDoc();
-  occupy(d, at(9), 11); // 09:00–09:55 (45 + 10)
-  const got = labels(listSlots(d, svc(), ctx()));
-  assert.deepEqual(got.slice(0, 3), ['09:55', '10:00', '10:30']);
+  occupy(d, at(9), 14); // 09:00–10:10 (60 + 10): a grade só voltaria às 10:30
+  assert.deepEqual(labels(listSlots(d, svc(), ctx())).slice(0, 3), ['10:10', '10:30', '11:00']);
+});
+
+test('listSlots não oferece horário quebrado colado em um horário da grade', () => {
+  const d = dayDoc();
+  occupy(d, at(9), 11); // 09:00–09:55: 09:55 ficaria a 5 min das 10:00
+  assert.deepEqual(labels(listSlots(d, svc(), ctx())).slice(0, 2), ['10:00', '10:30']);
 });
 
 test('listSlots respeita a antecedência mínima no fuso do estabelecimento', () => {

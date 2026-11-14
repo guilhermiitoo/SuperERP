@@ -5,6 +5,7 @@ import { ATOM_MIN, ATOMS_PER_DAY, addDays, daysBetween, fmtTime, instantOf, loca
 import { APPROVAL_MARGIN_MIN, APPROVAL_MIN_ADVANCE_MIN, MAX_CLAIM_ATOMS } from './constants.js';
 
 const atomOf = (minutes) => Math.round(minutes / ATOM_MIN);
+const ABUT_MIN_GAP = 15;
 
 export function todayOf(nowMs, offsetMin) {
   return localOf(nowMs, offsetMin).day;
@@ -110,14 +111,20 @@ export function listSlots(dayDoc, service, ctx) {
   const off = dayDoc.off || {};
   const busy = busyNow(dayDoc, nowMs, offset);
   const starts = new Set();
+  const abutting = [];
   let runStart = -1;
   for (let i = 0; i <= ATOMS_PER_DAY; i++) {
     const isOpen = i < ATOMS_PER_DAY && !off[i];
     if (isOpen && runStart < 0) runStart = i;
     if (isOpen && (i - runStart) % step === 0) starts.add(i);
-    // encostar no atendimento anterior evita buracos na agenda
-    if (isOpen && !busy[i] && i > 0 && busy[i - 1]) starts.add(i);
+    else if (isOpen && !busy[i] && busy[i - 1]) abutting.push([i, runStart]);
     if (!isOpen) runStart = -1;
+  }
+  // Encostar no atendimento anterior evita buracos na agenda, mas só vale oferecer um horário
+  // "quebrado" quando o próximo horário da grade deixaria 15 minutos ou mais sem uso.
+  for (const [i, from] of abutting) {
+    const untilGrid = step - ((i - from) % step);
+    if (untilGrid * ATOM_MIN >= ABUT_MIN_GAP) starts.add(i);
   }
   const slots = [];
   for (const start of [...starts].sort((a, b) => a - b)) {

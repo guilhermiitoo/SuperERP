@@ -1,0 +1,64 @@
+/* Área pública: a cliente reserva pelo celular. */
+
+.band { background: var(--accent); color: var(--on-accent); }
+.band-in { max-width: var(--page); margin: 0 auto; padding: var(--s-5) var(--s-4) var(--s-4); display: flex; align-items: center; gap: var(--s-4); }
+.band-logo { width: 3.75rem; height: 3.75rem; border-radius: var(--r-md); object-fit: cover; flex: none; background: var(--surface); }
+.band-name { font-family: var(--font-num); font-weight: 800; font-size: clamp(1.9rem, 7.6vw, 2.5rem); line-height: 0.98; letter-spacing: 0.005em; text-transform: uppercase; text-wrap: balance; }
+.band-tag { margin-top: 0.4rem; font-size: var(--t-sm); opacity: 0.92; }
+.band-sm .band-in { padding: var(--s-3) var(--s-4); }
+.band-sm .band-name { font-size: 1.5rem; }
+.band a { color: inherit; text-decoration: none; }
+
+.where { max-width: var(--page); margin: 0 auto; padding: var(--s-3) var(--s-4); display: grid; gap: 0.3rem; font-size: var(--t-sm); color: var(--ink-2); border-bottom: 1px solid var(--line); }
+.where > div { display: flex; gap: var(--s-2); align-items: flex-start; }
+.where .ico { width: 1.1rem; height: 1.1rem; flex: none; margin-top: 0.14rem; color: var(--ink-3); }
+
+.page { max-width: var(--page); margin: 0 auto; padding: var(--s-5) var(--s-4) var(--s-7); display: flex; flex-direction: column; gap: var(--s-5); }
+.page > h1 { margin-bottom: calc(var(--s-2) * -1); }
+.steps { font-size: var(--t-sm); font-weight: 650; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.back { margin: calc(var(--s-2) * -1) 0 calc(var(--s-2) * -1) calc(var(--s-3) * -1); }
+
+.pick { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) var(--s-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.pick-main { flex: 1 1 auto; min-width: 0; }
+.pick-title { font-weight: 700; line-height: 1.25; }
+.pick-sub { font-size: var(--t-sm); color: var(--ink-2); }
+
+.day-title { font-size: var(--t-lg); text-transform: capitalize; }
+.day-title::first-letter { text-transform: uppercase; }
+.day-title { text-transform: none; }
+
+.ticket { display: flex; gap: var(--s-4); align-items: center; padding: var(--s-4); border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.ticket-main { min-width: 0; display: grid; gap: 0.15rem; }
+.ticket-time { font-family: var(--font-num); font-weight: 800; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums lining-nums; }
+.ticket-time small { font-size: 0.55em; font-weight: 650; color: var(--ink-2); margin-left: 0.3em; }
+.ticket-svc { font-weight: 700; font-size: 1.125rem; line-height: 1.25; }
+
+.done-head { display: grid; justify-items: center; gap: var(--s-4); text-align: center; padding-top: var(--s-4); }
+.stamp { position: relative; animation: stamp 0.5s var(--ease) both; }
+.stamp-mark {
+  position: absolute; right: -0.9rem; bottom: -0.7rem; width: 2.5rem; height: 2.5rem; border-radius: 50%;
+  display: grid; place-items: center; background: var(--ok); color: #fff; border: 3px solid var(--paper);
+  animation: pop 0.35s 0.28s var(--ease) both;
+}
+.stamp-mark.is-wait { background: var(--warn); }
+.stamp-mark.is-off { background: var(--ink-2); }
+.stamp-mark .ico { stroke-width: 2.4; }
+@keyframes stamp { from { opacity: 0; transform: scale(1.18) rotate(-4deg); } }
+@keyframes pop { from { opacity: 0; transform: scale(0.4); } }
+
+.linkbox { display: flex; gap: var(--s-2); align-items: stretch; }
+.linkbox .input { font-size: var(--t-sm); min-height: var(--tap); color: var(--ink-2); }
+
+.foot { max-width: var(--page); margin: 0 auto; padding: var(--s-4) var(--s-4) var(--s-6); border-top: 1px solid var(--line); font-size: var(--t-xs); color: var(--ink-2); display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4); justify-content: space-between; }
+.foot button { background: none; border: 0; padding: 0; color: var(--accent-text); text-decoration: underline; text-underline-offset: 0.18em; font-size: inherit; }
+
+.hp { position: absolute; left: -200vw; width: 1px; height: 1px; opacity: 0; }
+
+/* telas largas: mesma coluna, um pouco mais larga; os dias viram uma grade em vez de faixa rolável */
+@media (min-width: 48rem) {
+  :root { --page: 41rem; }
+  .band-in { padding: var(--s-6) var(--s-4) var(--s-5); }
+  .where { grid-auto-flow: column; justify-content: start; gap: var(--s-5); }
+  .page { padding-top: var(--s-6); }
+  .leaves { flex-wrap: wrap; overflow: visible; margin: 0; padding: 3px 0 var(--s-2); }
+}
