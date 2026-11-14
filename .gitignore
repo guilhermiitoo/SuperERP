@@ -1,0 +1,11 @@
+node_modules/
+*.log
+.firebase/
+.env
+.env.local
+serviceAccount*.json
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/review/
+.impeccable/config.local.json
+test-results/
