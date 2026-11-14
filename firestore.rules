@@ -1,6 +1,408 @@
 rules_version = '2';
+
+// Agenda Base — camada confiável.
+//
+// Não existe servidor próprio: estas regras são a única validação que um cliente malicioso não
+// consegue pular. Leia docs/PLANO.md ("Como a sobreposição é impedida") antes de alterar.
+//
+// Invariante central: os átomos (5 min) em days/{dia}.busy são exatamente a união dos intervalos
+// [start, start+n) das reservas pendentes/confirmadas daquele dia. Toda gravação que muda uma
+// reserva vem no mesmo lote que a gravação do dia, e uma confere a outra com getAfter().
+//
+// Constantes espelhadas de public/js/core/constants.js: 48 átomos (4 h) de ocupação máxima,
+// 60 min de margem de aprovação, 90 min de antecedência mínima no modo aprovação.
+
 service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} { allow read, write: if false; }
+  match /databases/{db}/documents {
+
+    // ------------------------------------------------------------------ acesso
+
+    function isOwner() {
+      return request.auth != null && exists(/databases/$(db)/documents/owners/$(request.auth.uid));
+    }
+
+    function cfg() {
+      return get(/databases/$(db)/documents/config/public).data;
+    }
+
+    function bookingPath(token) { return /databases/$(db)/documents/bookings/$(token); }
+    function lockPath(bid) { return /databases/$(db)/documents/locks/$(bid); }
+    function dayPath(agenda, day) { return /databases/$(db)/documents/agendas/$(agenda)/days/$(string(day)); }
+
+    // ------------------------------------------------------------------ átomos
+
+    function allAtoms() {
+      return [
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23',
+        '24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47',
+        '48', '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59', '60', '61', '62', '63', '64', '65', '66', '67', '68', '69', '70', '71',
+        '72', '73', '74', '75', '76', '77', '78', '79', '80', '81', '82', '83', '84', '85', '86', '87', '88', '89', '90', '91', '92', '93', '94', '95',
+        '96', '97', '98', '99', '100', '101', '102', '103', '104', '105', '106', '107', '108', '109', '110', '111', '112', '113', '114', '115', '116', '117', '118', '119',
+        '120', '121', '122', '123', '124', '125', '126', '127', '128', '129', '130', '131', '132', '133', '134', '135', '136', '137', '138', '139', '140', '141', '142', '143',
+        '144', '145', '146', '147', '148', '149', '150', '151', '152', '153', '154', '155', '156', '157', '158', '159', '160', '161', '162', '163', '164', '165', '166', '167',
+        '168', '169', '170', '171', '172', '173', '174', '175', '176', '177', '178', '179', '180', '181', '182', '183', '184', '185', '186', '187', '188', '189', '190', '191',
+        '192', '193', '194', '195', '196', '197', '198', '199', '200', '201', '202', '203', '204', '205', '206', '207', '208', '209', '210', '211', '212', '213', '214', '215',
+        '216', '217', '218', '219', '220', '221', '222', '223', '224', '225', '226', '227', '228', '229', '230', '231', '232', '233', '234', '235', '236', '237', '238', '239',
+        '240', '241', '242', '243', '244', '245', '246', '247', '248', '249', '250', '251', '252', '253', '254', '255', '256', '257', '258', '259', '260', '261', '262', '263',
+        '264', '265', '266', '267', '268', '269', '270', '271', '272', '273', '274', '275', '276', '277', '278', '279', '280', '281', '282', '283', '284', '285', '286', '287'
+      ];
+    }
+
+    // Chaves dos átomos [s, s+n). Quem chama garante 0 <= s e s+n <= 288.
+    function atoms(s, n) { return allAtoms()[s:s + n].toSet(); }
+
+    function holding(status) { return status == 'pending' || status == 'confirmed'; }
+
+    // Solicitação pendente vencida: prazo de aprovação, ou 1 h antes do início, o que vier primeiro.
+    function expired(b) {
+      return request.time.toMillis() > b.pendingSince.toMillis() + b.approvalMin * 60000
+          || request.time.toMillis() > b.startAt.toMillis() - 3600000;
+    }
+
+    // O instante startAt corresponde ao dia/átomo local informados, no fuso do estabelecimento.
+    function localOk(b, offsetMin) {
+      let t = timestamp.value(b.startAt.toMillis() + offsetMin * 60000);
+      return b.startAt.toMillis() % 300000 == 0
+        && t.year() * 10000 + t.month() * 100 + t.day() == b.day
+        && t.hours() * 12 + t.minutes() / 5 == b.start;
+    }
+
+    // Antecedência mínima e janela máxima para quem reserva pelo link.
+    // (Sem operador ternário: o motor de regras não aceita ternário cujo teste dependa de get()/exists().)
+    function publicTime(b, c) {
+      let now = request.time.toMillis();
+      let start = b.startAt.toMillis();
+      let localNow = now + c.utcOffsetMin * 60000;
+      let limit = localNow - (localNow % 86400000) + (c.rules.maxDays + 1) * 86400000;
+      return start >= now + c.rules.minAdvanceMin * 60000
+        && (c.rules.mode != 'approval' || start >= now + 90 * 60000)
+        && start + c.utcOffsetMin * 60000 < limit;
+    }
+
+    // ------------------------------------------------------------------ configuração e serviços
+
+    function configOk(c) {
+      return c.timezone is string && c.week is map && c.exceptions is map
+        && c.business is map && c.business.name is string && c.business.name.size() > 0
+        && c.utcOffsetMin is int && c.utcOffsetMin >= -720 && c.utcOffsetMin <= 840 && c.utcOffsetMin % 5 == 0
+        && c.rules.mode in ['auto', 'approval'] && c.rules.paused is bool
+        && c.rules.minAdvanceMin is int && c.rules.minAdvanceMin >= 0 && c.rules.minAdvanceMin <= 43200
+        && c.rules.maxDays is int && c.rules.maxDays >= 1 && c.rules.maxDays <= 365
+        && c.rules.slotStepMin is int && c.rules.slotStepMin >= 5 && c.rules.slotStepMin % 5 == 0
+        && c.rules.cancelLimitMin is int && c.rules.cancelLimitMin >= 0 && c.rules.cancelLimitMin <= 43200
+        && c.rules.approvalMin is int && c.rules.approvalMin >= 5 && c.rules.approvalMin <= 10080;
+    }
+
+    function serviceOk(s) {
+      return s.keys().hasOnly(['name', 'description', 'price', 'duration', 'buffer', 'active', 'order'])
+        && s.name is string && s.name.size() > 0 && s.name.size() <= 120
+        && s.description is string && s.description.size() <= 600
+        && s.price is int && s.price >= 0
+        && s.duration is int && s.duration >= 5 && s.duration % 5 == 0
+        && s.buffer is int && s.buffer >= 0 && s.buffer % 5 == 0
+        && (s.duration + s.buffer) / 5 <= 48
+        && s.active is bool && s.order is int;
+    }
+
+    match /config/{docId} {
+      allow read: if docId == 'public';
+      allow write: if docId == 'public' && isOwner() && configOk(request.resource.data);
+    }
+
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create, update: if isOwner() && serviceOk(request.resource.data);
+      allow delete: if isOwner();
+    }
+
+    // Bloqueios têm anotações pessoais: só a proprietária. O efeito público vai para days/.off.
+    match /blocks/{blockId} {
+      allow read, write: if isOwner();
+    }
+
+    // Quem é proprietária. Criado pelo instalador no console; ninguém grava pelo aplicativo.
+    match /owners/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+
+    // ------------------------------------------------------------------ dias (disponibilidade pública)
+
+    function dayShape(d, dayId) {
+      return d.keys().hasOnly(['day', 'shut', 'off', 'busy', 'holds', 'op', 'v'])
+        && d.keys().hasAll(['day', 'shut', 'off', 'busy', 'holds'])
+        && d.day is int && string(d.day) == dayId
+        && d.shut is bool && d.off is map && d.busy is map && d.holds is map;
+    }
+
+    // Manutenção da proprietária: só expediente/bloqueios. Nunca altera átomos de reservas.
+    function dayMaintenance() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['shut', 'off', 'v'])
+        && request.resource.data.shut is bool && request.resource.data.off is map;
+    }
+
+    // O intervalo depois do atendimento pode ser cortado apenas por tempo indisponível ou pelo fim do dia.
+    function claimOk(before, b) {
+      let dur = b['service']['duration'] / 5;
+      let full = (b['service']['duration'] + b['service']['buffer']) / 5;
+      return b.n >= dur && b.n <= full
+        && (b.n == full || b.start + b.n == 288 || string(b.start + b.n) in before.off);
+    }
+
+    // A reserva ocupa átomos neste dia?
+    function holdsHere(b, dayId) { return string(b.day) == dayId && holding(b.status); }
+
+    // Os átomos recém-ocupados estavam livres para a proprietária (expediente) e o tamanho é coerente.
+    function freshOk(before, added, b) {
+      return added.size() == 0
+        || (before.shut == false && !before.off.keys().toSet().hasAny(added) && claimOk(before, b));
+    }
+
+    // A retenção (holds) reflete o estado da reserva depois da gravação.
+    function holdOk(before, after, b1, dayId) {
+      let wantsHold = b1.status == 'pending' && string(b1.day) == dayId;
+      return after.holds.diff(before.holds).affectedKeys().hasOnly([b1.bid])
+        && ((wantsHold && after.holds[b1.bid] == {'s': b1.start, 'n': b1.n, 'a': b1.approvalMin, 'c': request.time})
+            || (!wantsHold && !(b1.bid in after.holds)));
+    }
+
+    // Reserva nova: só acrescenta exatamente os próprios átomos.
+    function dayAdd(before, after, b1, dayId) {
+      let busyDiff = after.busy.diff(before.busy);
+      let cur = atoms(b1.start, b1.n);
+      return holdsHere(b1, dayId)
+        && busyDiff.addedKeys() == cur && busyDiff.removedKeys().size() == 0 && busyDiff.changedKeys().size() == 0
+        && freshOk(before, cur, b1)
+        && holdOk(before, after, b1, dayId);
+    }
+
+    // Reserva alterada: a mudança em busy é exatamente a diferença entre o que ela ocupava e o que ocupa.
+    function dayMove(before, after, b0, b1, dayId) {
+      let busyDiff = after.busy.diff(before.busy);
+      // uma pendente só "segura" átomos enquanto sua retenção existir (pode ter vencido e sido liberada)
+      let h0 = holdsHere(b0, dayId) && (b0.status != 'pending' || (b0.bid in before.holds));
+      let h1 = holdsHere(b1, dayId);
+      let old = atoms(b0.start, b0.n);
+      let cur = atoms(b1.start, b1.n);
+      return busyDiff.changedKeys().size() == 0
+        && holdOk(before, after, b1, dayId)
+        && ((!h0 && !h1 && busyDiff.addedKeys().size() == 0 && busyDiff.removedKeys().size() == 0)
+            || (!h0 && h1 && busyDiff.addedKeys() == cur && busyDiff.removedKeys().size() == 0
+                && freshOk(before, cur, b1))
+            || (h0 && !h1 && busyDiff.removedKeys() == old && busyDiff.addedKeys().size() == 0)
+            || (h0 && h1 && busyDiff.addedKeys() == cur.difference(old) && busyDiff.removedKeys() == old.difference(cur)
+                && freshOk(before, cur.difference(old), b1)));
+    }
+
+    // Gravação de dia que acompanha a criação/alteração de uma reserva no mesmo lote.
+    function dayChange(before, after, op, agenda, dayId) {
+      let lock = getAfter(lockPath(op.bid)).data;
+      let path = bookingPath(lock.token);
+      let b1 = getAfter(path).data;
+      return b1.bid == op.bid && b1.rev == op.rev && b1.agenda == agenda
+        && ((op.rev == 1 && dayAdd(before, after, b1, dayId))
+            || (op.rev > 1 && dayMove(before, after, get(path).data, b1, dayId)));
+    }
+
+    // Liberação de retenção vencida: qualquer pessoa pode, a regra confere o vencimento na reserva real.
+    function dayRelease(before, after, bid, dayId) {
+      let lock = get(lockPath(bid)).data;
+      let b = get(bookingPath(lock.token)).data;
+      let busyDiff = after.busy.diff(before.busy);
+      let holdDiff = after.holds.diff(before.holds);
+      return bid in before.holds
+        && b.bid == bid && b.status == 'pending' && string(b.day) == dayId && expired(b)
+        && busyDiff.removedKeys() == atoms(b.start, b.n)
+        && busyDiff.addedKeys().size() == 0 && busyDiff.changedKeys().size() == 0
+        && holdDiff.removedKeys() == [bid].toSet() && holdDiff.affectedKeys().size() == 1;
+    }
+
+    function dayBookingOp(agenda, dayId) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let op = after.op;
+      return after.diff(before).affectedKeys().hasOnly(['busy', 'holds', 'op'])
+        && op is map && op.keys().hasOnly(['bid', 'rev']) && op.keys().hasAll(['bid', 'rev'])
+        && op.bid is string && op.rev is int
+        && ((op.rev == 0 && dayRelease(before, after, op.bid, dayId))
+            || (op.rev > 0 && dayChange(before, after, op, agenda, dayId)));
+    }
+
+    match /agendas/{agenda}/days/{dayId} {
+      allow read: if true;
+      allow create: if isOwner() && dayShape(request.resource.data, dayId)
+        && request.resource.data.busy.size() == 0 && request.resource.data.holds.size() == 0;
+      allow update: if dayBookingOp(agenda, dayId) || (isOwner() && dayMaintenance());
+      allow delete: if isOwner() && resource.data.busy.size() == 0;
+    }
+
+    // ------------------------------------------------------------------ reservas
+
+    function snapshotOk(s) {
+      return s.keys().hasOnly(['id', 'name', 'price', 'duration', 'buffer'])
+        && s.keys().hasAll(['id', 'name', 'price', 'duration', 'buffer'])
+        && s.id is string && s.id.size() <= 60
+        && s.name is string && s.name.size() <= 120
+        && s.price is int && s.price >= 0
+        && s.duration is int && s.duration >= 5 && s.duration % 5 == 0
+        && s.buffer is int && s.buffer >= 0 && s.buffer % 5 == 0
+        && (s.duration + s.buffer) / 5 <= 48;
+    }
+
+    function customerOk(c) {
+      return c.keys().hasOnly(['name', 'phone']) && c.keys().hasAll(['name', 'phone'])
+        && c.name is string && c.name.size() >= 2 && c.name.size() <= 320
+        && c.phone is string && c.phone.matches('^[1-9][1-9][0-9]{8,9}$');
+    }
+
+    function bookingFields() {
+      return ['bid', 'rev', 'agenda', 'status', 'source', 'mode', 'day', 'start', 'n', 'startAt', 'service',
+              'customer', 'approvalMin', 'cancelLimitMin', 'createdAt', 'updatedAt', 'pendingSince', 'endedBy'];
+    }
+
+    function bookingShape(b) {
+      return b.keys().hasOnly(bookingFields()) && b.keys().hasAll(bookingFields())
+        && b.bid is string && b.bid.matches('^[A-Za-z0-9_-]{20}$')
+        && b.rev is int && b.agenda == 'main'
+        && b.status in ['pending', 'confirmed', 'done', 'cancelled', 'declined', 'expired', 'noshow']
+        && b.source in ['public', 'manual'] && b.mode in ['auto', 'approval']
+        && b.day is int && b.start is int && b.n is int
+        && b.start >= 0 && b.n >= 1 && b.n <= 48 && b.start + b.n <= 288
+        && b.startAt is timestamp && b.createdAt is timestamp && b.updatedAt == request.time
+        && (b.pendingSince == null || b.pendingSince is timestamp)
+        && (b.endedBy == null || b.endedBy in ['customer', 'owner'])
+        && b.approvalMin is int && b.approvalMin >= 0
+        && b.cancelLimitMin is int && b.cancelLimitMin >= 0
+        && snapshotOk(b['service']) && customerOk(b.customer);
+    }
+
+    // O documento do dia foi gravado neste mesmo lote, para esta reserva e esta revisão.
+    function stamped(b, day) {
+      return getAfter(dayPath(b.agenda, day)).data.op == {'bid': b.bid, 'rev': b.rev};
+    }
+
+    function linked(b, token) {
+      return getAfter(lockPath(b.bid)).data.token == token && stamped(b, b.day);
+    }
+
+    // A cópia do serviço dentro da reserva é igual ao serviço ativo cadastrado.
+    function liveService(s) {
+      let live = get(/databases/$(db)/documents/services/$(s.id)).data;
+      return live.active == true && live.name == s.name && live.price == s.price
+        && live.duration == s.duration && live.buffer == s.buffer;
+    }
+
+    function publicCreate(b, token) {
+      let c = cfg();
+      return linked(b, token) && localOk(b, c.utcOffsetMin)
+        && c.rules.paused == false
+        && b.source == 'public' && b.createdAt == request.time && b.endedBy == null
+        && b.mode == c.rules.mode && b.cancelLimitMin == c.rules.cancelLimitMin
+        && ((b.mode == 'auto' && b.status == 'confirmed' && b.pendingSince == null && b.approvalMin == 0)
+            || (b.mode == 'approval' && b.status == 'pending' && b.pendingSince == request.time
+                && b.approvalMin == c.rules.approvalMin))
+        && liveService(b['service']) && publicTime(b, c);
+    }
+
+    // Proprietária: reserva manual ou restauração de cópia de segurança.
+    // Histórico (ou confirmada que já passou) não ocupa agenda; o resto passa pela mesma conferência de átomos.
+    function ownerCreate(b, token) {
+      return !holding(b.status)
+        || (b.status == 'confirmed' && b.pendingSince == null && b.startAt < request.time)
+        || (linked(b, token) && localOk(b, cfg().utcOffsetMin) && b.endedBy == null
+            && ((b.status == 'confirmed' && b.pendingSince == null)
+                || (b.status == 'pending' && b.pendingSince == request.time && b.approvalMin > 0)));
+    }
+
+    function sameSlot(b0, b1) {
+      return b1.day == b0.day && b1.start == b0.start && b1.n == b0.n && b1.startAt == b0.startAt;
+    }
+
+    // Cancelar (cliente dentro do prazo, ou proprietária) e recusar (proprietária).
+    function tEnd(b0, b1, owner) {
+      return holding(b0.status) && sameSlot(b0, b1) && b1.customer == b0.customer
+        && b1.pendingSince == null && stamped(b1, b0.day)
+        && ((owner && b1.endedBy == 'owner'
+             && (b1.status == 'cancelled' || (b1.status == 'declined' && b0.status == 'pending')))
+            || (!owner && b1.endedBy == 'customer' && b1.status == 'cancelled'
+                && ((b0.status == 'pending' && request.time < b0.startAt)
+                    || (b0.status == 'confirmed'
+                        && request.time.toMillis() <= b0.startAt.toMillis() - b0.cancelLimitMin * 60000))));
+    }
+
+    function tApprove(b0, b1, owner) {
+      return owner && b0.status == 'pending' && b1.status == 'confirmed' && !expired(b0)
+        && sameSlot(b0, b1) && b1.customer == b0.customer
+        && b1.pendingSince == null && b1.endedBy == null && stamped(b1, b0.day);
+    }
+
+    function tExpire(b0, b1) {
+      return b0.status == 'pending' && b1.status == 'expired' && expired(b0)
+        && sameSlot(b0, b1) && b1.customer == b0.customer
+        && b1.pendingSince == null && b1.endedBy == null && stamped(b1, b0.day);
+    }
+
+    // Remarcação: o novo dia e o antigo são gravados no mesmo lote (stamped nos dois).
+    function tMove(b0, b1, owner) {
+      let c = cfg();
+      return holding(b0.status) && !sameSlot(b0, b1) && b1.customer == b0.customer && b1.endedBy == null
+        && (b0.status != 'pending' || !expired(b0))
+        && localOk(b1, c.utcOffsetMin)
+        && stamped(b1, b1.day) && (b1.day == b0.day || stamped(b1, b0.day))
+        && ((owner && b1.status == 'confirmed' && b1.pendingSince == null)
+            || (!owner
+                && request.time.toMillis() <= b0.startAt.toMillis() - b0.cancelLimitMin * 60000
+                && publicTime(b1, c)
+                && ((b0.mode == 'approval' && b1.status == 'pending' && b1.pendingSince == request.time)
+                    || (b0.mode == 'auto' && b1.status == 'confirmed' && b1.pendingSince == null))));
+    }
+
+    // Somente proprietária, sem efeito na agenda.
+    function tFinish(b0, b1) {
+      return b0.status == 'confirmed' && (b1.status == 'done' || b1.status == 'noshow')
+        && request.time >= b0.startAt
+        && sameSlot(b0, b1) && b1.customer == b0.customer && b1.pendingSince == null && b1.endedBy == null;
+    }
+
+    function tReopen(b0, b1) {
+      return (b0.status == 'done' || b0.status == 'noshow') && b1.status == 'confirmed'
+        && sameSlot(b0, b1) && b1.customer == b0.customer && b1.pendingSince == null && b1.endedBy == null;
+    }
+
+    function tEditCustomer(b0, b1) {
+      return b1.status == b0.status && sameSlot(b0, b1)
+        && b1.pendingSince == b0.pendingSince && b1.endedBy == b0.endedBy;
+    }
+
+    function bookingUpdate() {
+      let b0 = resource.data;
+      let b1 = request.resource.data;
+      let owner = isOwner();
+      return bookingShape(b1) && b1.rev == b0.rev + 1
+        && b1.diff(b0).affectedKeys().hasOnly(
+             ['rev', 'updatedAt', 'status', 'day', 'start', 'n', 'startAt', 'pendingSince', 'endedBy', 'customer'])
+        && (tEnd(b0, b1, owner) || tApprove(b0, b1, owner) || tExpire(b0, b1) || tMove(b0, b1, owner)
+            || (owner && (tFinish(b0, b1) || tReopen(b0, b1) || tEditCustomer(b0, b1))));
+    }
+
+    match /bookings/{token} {
+      // O token (32 bytes aleatórios) é a autorização da cliente: lê quem tem o caminho exato.
+      allow get: if true;
+      allow list: if isOwner();
+      allow create: if token.matches('^[A-Za-z0-9_-]{43}$')
+        && bookingShape(request.resource.data) && request.resource.data.rev == 1
+        && ((isOwner() && ownerCreate(request.resource.data, token))
+            || (!isOwner() && publicCreate(request.resource.data, token)));
+      allow update: if bookingUpdate();
+      allow delete: if isOwner() && !holding(resource.data.status);
+    }
+
+    // Índice privado bid → token. Só as regras e a proprietária leem.
+    match /locks/{bid} {
+      allow read, delete: if isOwner();
+      allow create: if request.resource.data.keys().hasOnly(['token']) && request.resource.data.token is string
+        && getAfter(bookingPath(request.resource.data.token)).data.bid == bid
+        && getAfter(bookingPath(request.resource.data.token)).data.rev == 1;
+    }
   }
 }

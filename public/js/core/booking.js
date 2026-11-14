@@ -238,3 +238,12 @@ export function planReopen({ booking: b, nowMs }) {
   requireStored(b, STATUS.DONE, STATUS.NOSHOW);
   return { booking: touch(b, nowMs, { status: STATUS.CONFIRMED }), dayOps: [] };
 }
+
+/** Correção de nome/telefone pela proprietária. Não mexe na agenda. */
+export function planEditCustomer({ booking: b, customer, nowMs }) {
+  const name = normalizeName(customer?.name);
+  if (!name) fail('invalid_name');
+  const phone = normalizePhone(customer?.phone);
+  if (!phone) fail('invalid_phone');
+  return { booking: touch(b, nowMs, { customer: { name, phone } }), dayOps: [] };
+}
