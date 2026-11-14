@@ -72,7 +72,8 @@ export function field({ label, hint, error, control }) {
 
 /** Executa uma ação assíncrona a partir de um botão: bloqueia cliques repetidos e mostra carregando. */
 export async function busy(button, fn) {
-  if (!button || button.getAttribute('aria-busy') === 'true') return undefined;
+  if (!button) return fn();
+  if (button.getAttribute('aria-busy') === 'true') return undefined;
   button.setAttribute('aria-busy', 'true');
   button.disabled = true;
   try {

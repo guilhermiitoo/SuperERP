@@ -39,12 +39,16 @@ export function toast(message, { danger = false, ms = 4200 } = {}) {
   setTimeout(() => el.remove(), ms);
 }
 
-/** Faixa "sem conexão" no topo; avisa quem estiver ouvindo quando a conexão volta. */
+/** Faixa "sem conexão" no topo; avisa quem estiver ouvindo quando a conexão muda. */
+let connection = null;
 export function watchConnection(host, onChange) {
   const bar = h('div.offline-bar', { role: 'status', hidden: navigator.onLine }, icon('offline'), 'Sem conexão. Os dados podem estar desatualizados e não é possível agendar agora.');
   host.prepend(bar);
-  const update = () => { bar.hidden = navigator.onLine; onChange?.(navigator.onLine); };
-  addEventListener('online', update);
-  addEventListener('offline', update);
+  if (!connection) {
+    const update = () => { connection.bar.hidden = navigator.onLine; connection.onChange?.(navigator.onLine); };
+    addEventListener('online', update);
+    addEventListener('offline', update);
+  }
+  connection = { bar, onChange };
   return bar;
 }

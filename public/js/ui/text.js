@@ -5,6 +5,9 @@ export const STATUS_LABEL = {
   declined: 'Recusado', expired: 'Expirado', noshow: 'Não compareceu',
 };
 
+/** Versão curta, para listas. */
+export const STATUS_SHORT = { ...STATUS_LABEL, pending: 'Pendente', noshow: 'Não veio' };
+
 export const STATUS_CHIP = {
   pending: 'chip-warn', confirmed: 'chip-ok', done: 'chip-done', cancelled: 'chip-danger',
   declined: 'chip-danger', expired: 'chip-done', noshow: 'chip-danger',
