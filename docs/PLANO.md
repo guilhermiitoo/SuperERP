@@ -3,6 +3,9 @@
 > **Para quem for executar:** as etapas usam caixas (`- [ ]`) para acompanhamento. Cada tarefa segue
 > teste-primeiro: escrever o teste, ver falhar, implementar o mínimo, ver passar, commit.
 > O estado real de cada verificação fica em [`TESTES.md`](TESTES.md).
+>
+> **Situação (14/11/2026):** tarefas 1 a 10 implementadas e testadas. Pendências externas listadas em
+> [`TESTES.md`](TESTES.md#o-que-não-foi-verificado-depende-de-configuração-externa).
 
 **Objetivo:** sistema web de agendamento por link para uma profissional autônoma, com painel no celular,
 uma instalação por negócio e operação inicial dentro de cotas gratuitas.
@@ -126,14 +129,14 @@ public/                      site publicável
     schedule.js              expediente → átomos; cálculo de horários livres
     booking.js               estados, validações e planejamento das operações
     ics.js, whatsapp.js, validate.js, backup.js, ids.js
-  js/data/                   store-firebase.js, store-demo.js, demo-seed.js, store.js
+  js/data/                   store.js (orquestração), firebase.js, demo.js, demo-seed.js
   js/ui/                     dom, ícones, folha (sheet), avisos, conexão
   js/public/                 fluxo de agendamento e página da reserva
   js/admin/                  login, Hoje, Agenda, Clientes, Ajustes
   vendor/                    Firebase SDK empacotado, fontes
 firestore.rules              camada confiável
 tests/unit, tests/rules, tests/e2e, tests/e2e-firebase
-scripts/                     serve.mjs, build-vendor.mjs, criar-proprietaria.mjs
+scripts/                     serve.mjs, build-vendor.mjs, build-icons.mjs, test-rules.sh
 docs/
 ```
 
@@ -155,38 +158,38 @@ Casos que a especificação implica e que mais provavelmente atingem uma pessoa 
 ### Tarefa 1 — Tempo e datas (`core/time.js`)
 Teste: `tests/unit/time.test.mjs`. Produz `dayIdOf`, `addDays`, `weekdayOf`, `instantOf(day, minutos, offset)`,
 `localOf(ms, offset)`, `offsetMinutesOf(timeZone, ms)`, `fmtTime`, `fmtDayLong`.
-- [ ] `instantOf(20261114, 540, -240)` é `2026-11-14T13:00:00Z`; `localOf` inverte.
-- [ ] 23:30 de Manaus pertence ao dia local, não ao dia UTC.
-- [ ] `offsetMinutesOf('America/Manaus')` é −240.
+- [x] `instantOf(20261114, 540, -240)` é `2026-11-14T13:00:00Z`; `localOf` inverte.
+- [x] 23:30 de Manaus pertence ao dia local, não ao dia UTC.
+- [x] `offsetMinutesOf('America/Manaus')` é −240.
 
 ### Tarefa 2 — Expediente e horários livres (`core/schedule.js`)
 Teste: `tests/unit/schedule.test.mjs`. Produz `buildDay(settings, day, blocks)`, `claim(dayDoc, start, service, now)`,
 `listSlots(dayDoc, service, ctx)`, `nextDayWithSlots`.
-- [ ] Serviços de durações diferentes ocupam átomos diferentes.
-- [ ] Não cruza almoço, bloqueio nem reserva; termina dentro do expediente.
-- [ ] O intervalo após o atendimento pode passar do fim do expediente/pausa, nunca sobre outra reserva.
-- [ ] Opções de início seguem o passo configurado, sem confundir com duração.
-- [ ] Antecedência mínima e janela máxima no fuso do estabelecimento.
-- [ ] Retenção vencida não bloqueia.
+- [x] Serviços de durações diferentes ocupam átomos diferentes.
+- [x] Não cruza almoço, bloqueio nem reserva; termina dentro do expediente.
+- [x] O intervalo após o atendimento pode passar do fim do expediente/pausa, nunca sobre outra reserva.
+- [x] Opções de início seguem o passo configurado, sem confundir com duração.
+- [x] Antecedência mínima e janela máxima no fuso do estabelecimento.
+- [x] Retenção vencida não bloqueia.
 
 ### Tarefa 3 — Reservas (`core/booking.js`, `validate.js`, `ids.js`)
 Teste: `tests/unit/booking.test.mjs`. Produz `planCreate`, `planCancel`, `planDecline`, `planApprove`,
 `planReschedule`, `planFinish`, `planExpire`, `planReleaseHold`, `effectiveStatus`, `expiresAtMs`, `BookingError`.
-- [ ] Automático confirma; aprovação deixa pendente com retenção.
-- [ ] Cópia do serviço na reserva; mudar preço depois não altera a reserva.
-- [ ] Cancelar libera átomos; remarcar no mesmo dia e em outro dia.
-- [ ] Prazo da cliente para cancelar/remarcar; proprietária sem prazo.
-- [ ] Nome/telefone normalizados e validados.
+- [x] Automático confirma; aprovação deixa pendente com retenção.
+- [x] Cópia do serviço na reserva; mudar preço depois não altera a reserva.
+- [x] Cancelar libera átomos; remarcar no mesmo dia e em outro dia.
+- [x] Prazo da cliente para cancelar/remarcar; proprietária sem prazo.
+- [x] Nome/telefone normalizados e validados.
 
 ### Tarefa 4 — Regras do Firestore (`firestore.rules`)
 Teste: `tests/rules/*.test.mjs` no emulador.
-- [ ] Duas reservas simultâneas no mesmo período: uma aceita, outra negada.
-- [ ] Cliente malicioso: reserva sem átomos, átomos sem reserva, sobrescrever átomo, horário fechado,
+- [x] Duas reservas simultâneas no mesmo período: uma aceita, outra negada.
+- [x] Cliente malicioso: reserva sem átomos, átomos sem reserva, sobrescrever átomo, horário fechado,
   serviço adulterado, fora da janela, com agenda pausada.
-- [ ] Manual × pública concorrendo.
-- [ ] Remarcação atômica; cancelamento libera; expiração libera; aprovação após o prazo negada.
-- [ ] Visitante não lista reservas, não lê `locks`/`blocks`/`owners`, não escreve configuração.
-- [ ] Token de uma cliente não dá acesso à reserva de outra.
+- [x] Manual × pública concorrendo.
+- [x] Remarcação atômica; cancelamento libera; expiração libera; aprovação após o prazo negada.
+- [x] Visitante não lista reservas, não lê `locks`/`blocks`/`owners`, não escreve configuração.
+- [x] Token de uma cliente não dá acesso à reserva de outra.
 
 ### Tarefa 5 — Camada de dados (`js/data`)
 Teste: `tests/unit/store-demo.test.mjs` e `tests/rules/store-firebase.test.mjs` (mesma bateria nos dois).
