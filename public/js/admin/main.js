@@ -3,7 +3,7 @@
 import { createAppStore, isDemo } from '../boot.js';
 import { h, mount, field, busy } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
-import { toast, watchConnection } from '../ui/overlay.js';
+import { toast, watchConnection, startFailure } from '../ui/overlay.js';
 import { errorText } from '../ui/text.js';
 import { applyTheme } from '../core/theme.js';
 import { todayOf } from '../core/schedule.js';
@@ -246,8 +246,7 @@ async function start() {
     }
     await afterSignIn();
   } catch (err) {
-    mount(app, h('main.login', h('h1', 'Não foi possível abrir'), h('div.notice.notice-danger', { role: 'alert' }, icon('offline'), h('span', errorText(err))),
-      h('button.btn.btn-primary.btn-block', { type: 'button', onclick: () => location.reload() }, 'Tentar de novo')));
+    startFailure(app, err, () => location.reload(), 'Conecte-se à internet para ver sua agenda atualizada.');
   }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

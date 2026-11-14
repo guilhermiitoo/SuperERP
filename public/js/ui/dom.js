@@ -46,6 +46,14 @@ export function mount(el, ...children) {
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 
+/**
+ * Conteúdo de botão cujo nome acessível difere do desenho na tela: o leitor de tela lê `spoken`,
+ * a tela mostra `visual`. Evita aria-label (que precisa conter o texto visível, WCAG 2.5.3).
+ */
+export function spoken(text, ...visual) {
+  return [h('span.sr-only', text), h('span.vis', { 'aria-hidden': 'true' }, visual)];
+}
+
 let uid = 0;
 export const newId = (prefix = 'f') => `${prefix}${++uid}`;
 

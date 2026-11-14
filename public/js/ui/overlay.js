@@ -52,3 +52,15 @@ export function watchConnection(host, onChange) {
   connection = { bar, onChange };
   return bar;
 }
+
+/** Tela de abertura sem conexão: não mostra dados antigos e tenta de novo quando a internet volta. */
+export function startFailure(host, err, retry, text) {
+  const offline = err?.code === 'offline' || !navigator.onLine;
+  const content = h('main.page.login', { id: 'conteudo', tabindex: '-1' },
+    h('div.empty', icon(offline ? 'offline' : 'alert'),
+      h('h1', offline ? 'Sem conexão' : 'Não foi possível abrir'),
+      h('span', offline ? `${text} Esta tela tenta de novo sozinha quando a internet voltar.` : 'Tente de novo em instantes.')),
+    h('button.btn.btn-primary.btn-block', { type: 'button', onclick: retry }, 'Tentar de novo'));
+  host.replaceChildren(content);
+  if (offline) addEventListener('online', retry, { once: true });
+}

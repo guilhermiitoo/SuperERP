@@ -83,6 +83,8 @@
   background: var(--surface); color: var(--ink); overflow: hidden; text-align: center;
   transition: border-color 0.15s, background-color 0.15s, transform 0.12s var(--ease);
 }
+.leaf > .vis { display: contents; }
+.leaf { position: relative; }
 .leaf-top {
   width: 100%; padding: 0.22rem 0 0.16rem; background: var(--ink); color: var(--paper);
   font-size: 0.72rem; font-weight: 750; letter-spacing: 0.07em; text-transform: uppercase; line-height: 1.2;

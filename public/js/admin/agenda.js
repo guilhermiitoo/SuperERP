@@ -37,8 +37,8 @@ export async function renderAgenda(ctx, main, rest, alive) {
     h('button.btn.btn-quiet.btn-icon', { type: 'button', 'aria-label': 'Semana anterior', onclick: () => set({ day: addDays(view.day, -7) }) }, icon('left')),
     h('div.leaves', { role: 'group', 'aria-label': 'Dias da semana' }, days.map((day) => {
       const n = countOf(day);
-      const el = leaf(day, { on: view.mode === 'day' && day === view.day, top: day === today ? 'hoje' : null, disabled: closed(day), onclick: () => set({ day, mode: 'day' }) });
-      el.setAttribute('aria-label', `${fmtDayLong(day)}, ${closed(day) ? 'fechado' : n === 1 ? '1 atendimento' : `${n} atendimentos`}`);
+      const el = leaf(day, { on: view.mode === 'day' && day === view.day, top: day === today ? 'hoje' : null, disabled: closed(day), onclick: () => set({ day, mode: 'day' }),
+        label: `${fmtDayLong(day)}, ${closed(day) ? 'fechado' : n === 1 ? '1 atendimento' : `${n} atendimentos`}` });
       el.querySelector('.leaf-foot').replaceWith(h('span.leaf-dots', { 'aria-hidden': 'true' }, Array.from({ length: Math.min(n, 5) }, () => h('i'))));
       return el;
     })),

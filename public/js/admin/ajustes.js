@@ -1,6 +1,6 @@
 // Ajustes: tudo o que muda de um negócio para outro é configurado aqui, sem mexer em código.
 
-import { h, mount, field, busy, copyText, downloadText } from '../ui/dom.js';
+import { h, mount, field, busy, copyText, downloadText, spoken } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { openSheet, confirmSheet, toast } from '../ui/overlay.js';
 import { errorText } from '../ui/text.js';
@@ -149,9 +149,10 @@ function services(ctx, main) {
       h('div.stack-sm', { style: { gap: '2px' } },
         h('button.btn.btn-quiet.btn-icon.btn-sm', { type: 'button', disabled: i === 0, 'aria-label': `Subir ${s.name}`, onclick: () => move(i, -1), style: { minHeight: '1.9rem', width: '2.2rem' } }, h('span', { style: { transform: 'rotate(180deg)', display: 'block' } }, icon('down'))),
         h('button.btn.btn-quiet.btn-icon.btn-sm', { type: 'button', disabled: i === list.length - 1, 'aria-label': `Descer ${s.name}`, onclick: () => move(i, 1), style: { minHeight: '1.9rem', width: '2.2rem' } }, icon('down'))),
-      h('button.grow', { type: 'button', onclick: () => serviceSheet(ctx, s), style: { border: 0, background: 'none', textAlign: 'left', padding: 0, minHeight: '3rem' }, 'aria-label': `Editar ${s.name}` },
-        h('div.prow-title', s.name, s.active ? null : h('span.chip', { style: { marginLeft: '0.5rem' } }, 'Inativo')),
-        h('div.prow-sub', `${fmtDuration(s.duration)}${s.buffer ? ` + ${s.buffer} min de intervalo` : ''}`)),
+      h('button.grow', { type: 'button', onclick: () => serviceSheet(ctx, s), style: { border: 0, background: 'none', textAlign: 'left', padding: 0, minHeight: '3rem', position: 'relative' } },
+        spoken(`Editar ${s.name}${s.active ? '' : ' (inativo)'}`,
+          h('div.prow-title', s.name, s.active ? null : h('span.chip', { style: { marginLeft: '0.5rem' } }, 'Inativo')),
+          h('div.prow-sub', `${fmtDuration(s.duration)}${s.buffer ? ` + ${s.buffer} min de intervalo` : ''}`))),
       h('span.prow-end.price', fmtMoney(s.price)))))
       : h('div.empty.card', icon('tag'), h('strong', 'Nenhum serviço'), h('span', 'Cadastre o primeiro para o link começar a funcionar.')),
     h('p.small.muted', 'Mudar preço ou duração vale só para as próximas reservas. As já marcadas continuam como estavam.'));

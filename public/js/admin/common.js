@@ -1,7 +1,7 @@
 // Peças usadas por mais de uma tela do painel: linha de atendimento, ficha da reserva,
 // reserva manual e bloqueio de horário.
 
-import { h, mount, field, busy, copyText } from '../ui/dom.js';
+import { h, mount, field, busy, copyText, spoken } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { leaf } from '../ui/leaf.js';
 import { timePicker } from '../ui/timepicker.js';
@@ -39,28 +39,26 @@ export function apptRow(ctx, b, { onDone } = {}) {
   const off = state === 'cancelled' || state === 'declined' || state === 'expired';
   return h(`button.appt${past ? '.is-past' : ''}${off ? '.is-off' : ''}`, {
     type: 'button',
-    'aria-label': `${fmtTime(minutes)}, ${b.customer.name}, ${b.service.name}, ${STATUS_LABEL[state]}`,
     onclick: () => bookingSheet(ctx, b, { onDone }),
-  },
+  }, spoken(`${fmtTime(minutes)}, ${b.customer.name}, ${b.service.name}, ${STATUS_LABEL[state]}`,
     h('span.appt-time', fmtTime(minutes), h('small', fmtTime(minutes + b.service.duration))),
     h('span.appt-main', h('div.appt-name', b.customer.name), h('div.appt-sub', b.service.name)),
     state === 'confirmed' ? null : h(`span.chip.${STATUS_CHIP[state]}`, STATUS_SHORT[state]),
-    icon('right'));
+    icon('right')));
 }
 
 export function blockRow(ctx, block, { onDone } = {}) {
   return h('button.appt.is-block', {
     type: 'button',
-    'aria-label': `Bloqueio ${block.allDay ? 'do dia inteiro' : `das ${fmtTime(block.s)} às ${fmtTime(block.e)}`}${block.note ? `, ${block.note}` : ''}`,
     onclick: async () => {
       const ok = await confirmSheet({ title: 'Remover bloqueio?', text: `${fmtDayLong(block.day)}${block.allDay ? ', dia inteiro' : `, das ${fmtTime(block.s)} às ${fmtTime(block.e)}`}. O horário volta a aparecer para as clientes.`, confirmLabel: 'Remover bloqueio', danger: true });
       if (!ok) return;
       try { await ctx.store.deleteBlock(block); toast('Bloqueio removido.'); onDone?.(); } catch (err) { ctx.fail(err); }
     },
-  },
+  }, spoken(`Bloqueio ${block.allDay ? 'do dia inteiro' : `das ${fmtTime(block.s)} às ${fmtTime(block.e)}`}${block.note ? `, ${block.note}` : ''}`,
     h('span.appt-time', block.allDay ? '—' : fmtTime(block.s), block.allDay ? null : h('small', fmtTime(block.e))),
     h('span.appt-main', h('div.appt-name', block.allDay ? 'Dia bloqueado' : 'Horário bloqueado'), h('div.appt-sub', block.note || 'Sem atendimento')),
-    icon('ban'));
+    icon('ban')));
 }
 
 // ------------------------------------------------------------------ ficha da reserva

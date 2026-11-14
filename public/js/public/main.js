@@ -6,7 +6,7 @@ import { h, mount, field, busy, downloadText, copyText } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { leaf } from '../ui/leaf.js';
 import { timePicker } from '../ui/timepicker.js';
-import { openSheet, confirmSheet, toast, watchConnection } from '../ui/overlay.js';
+import { openSheet, confirmSheet, toast, watchConnection, startFailure } from '../ui/overlay.js';
 import { STATUS_LABEL, STATUS_CHIP, errorText } from '../ui/text.js';
 import { applyTheme } from '../core/theme.js';
 import { ATOM_MIN, fmtDayLong, fmtDayShort, fmtDuration, fmtMoney, fmtTime, localOf } from '../core/time.js';
@@ -419,8 +419,7 @@ async function start() {
     store = await createAppStore();
     await loadBusiness();
   } catch (err) {
-    mount(app, h('main.page', h('h1', 'Não foi possível abrir'), h('div.notice.notice-danger', { role: 'alert' }, icon('offline'), h('span', errorText(err))),
-      h('button.btn.btn-primary.btn-block', { type: 'button', onclick: () => location.reload() }, 'Tentar de novo')));
+    startFailure(app, err, () => location.reload(), 'Conecte-se à internet para ver os serviços e horários.');
     return;
   }
   if (!settings) {

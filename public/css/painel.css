@@ -35,7 +35,8 @@
 .today-next { color: var(--ink-2); }
 
 /* linha de atendimento */
-.appt { display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 4.25rem; padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4); border: 0; background: transparent; text-align: left; }
+.appt > .vis { display: contents; }
+.appt { position: relative; display: flex; align-items: center; gap: var(--s-3); width: 100%; min-height: 4.25rem; padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4); border: 0; background: transparent; text-align: left; }
 button.appt:hover { background: var(--accent-soft); }
 .appt-time { flex: none; width: 3.6rem; font-family: var(--font-num); font-weight: 800; font-size: 1.5rem; line-height: 1; font-variant-numeric: tabular-nums lining-nums; }
 .appt-time small { display: block; margin-top: 0.2rem; font-size: 0.8rem; font-weight: 650; color: var(--ink-2); }
@@ -44,7 +45,7 @@ button.appt:hover { background: var(--accent-soft); }
 .appt-sub { font-size: var(--t-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .appt.is-past .appt-time, .appt.is-past .appt-name { color: var(--ink-2); }
 .appt.is-off .appt-name { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--ink-2); }
-.appt.is-block { background: repeating-linear-gradient(135deg, transparent 0 7px, var(--sunken) 7px 8px); }
+.appt.is-block { background: var(--sunken); }
 .appt.is-block .appt-time { color: var(--ink-2); }
 .appt .ico { color: var(--ink-3); flex: none; }
 

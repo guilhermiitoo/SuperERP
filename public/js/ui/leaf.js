@@ -1,5 +1,5 @@
 // A "folha" de calendário: dia da semana na faixa, número grande, mês no rodapé.
-import { h } from './dom.js';
+import { h, spoken } from './dom.js';
 import { MONTHS_SHORT, WEEKDAYS_SHORT, fmtDayLong, partsOf, weekdayOf } from '../core/time.js';
 
 /**
@@ -17,8 +17,7 @@ export function leaf(day, o = {}) {
   return h(`button.${cls}`, {
     type: 'button',
     'aria-pressed': o.on ? 'true' : 'false',
-    'aria-label': `${fmtDayLong(day)}${o.disabled ? `, ${o.foot || 'indisponível'}` : ''}`,
     dataset: o.disabled ? { day, off: '1' } : { day },
     onclick: o.onclick,
-  }, kids);
+  }, spoken(o.label || `${fmtDayLong(day)}${o.disabled ? `, ${o.foot || 'indisponível'}` : ''}`, kids));
 }

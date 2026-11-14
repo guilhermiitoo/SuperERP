@@ -188,7 +188,7 @@ test('agenda por semana mostra os sete dias, com reservas e dias fechados', asyn
   await page.getByRole('button', { name: 'Semana', exact: true }).click();
   for (const title of ['segunda-feira, 16 de novembro', 'quinta-feira, 19 de novembro', 'domingo, 22 de novembro']) await page.getByRole('heading', { name: title }).waitFor();
   await page.getByRole('region', { name: 'domingo, 22 de novembro' }).getByText('Fechado neste dia.').waitFor();
-  await page.getByRole('region', { name: 'quinta-feira, 19 de novembro' }).getByText('Sabrina Couto').waitFor();
+  await page.getByRole('region', { name: 'quinta-feira, 19 de novembro' }).locator('.appt-name', { hasText: 'Sabrina Couto' }).waitFor();
   await page.getByRole('button', { name: 'Próxima semana' }).click();
   await page.getByRole('heading', { name: 'segunda-feira, 23 de novembro' }).waitFor();
   await page.getByRole('button', { name: 'Ir para hoje' }).click();
@@ -253,7 +253,7 @@ test('serviços: mudar preço não altera reserva existente; desativar tira do l
   sheet = page.getByRole('dialog', { name: 'Editar serviço' });
   await sheet.getByText('Disponível para agendamento').click();
   await sheet.getByRole('button', { name: 'Salvar serviço' }).click();
-  await page.getByText('Inativo').waitFor();
+  await page.getByRole('button', { name: 'Editar Spa dos pés (inativo)' }).waitFor();
 
   await page.getByRole('button', { name: 'Novo' }).click();
   sheet = page.getByRole('dialog', { name: 'Novo serviço' });
