@@ -27,12 +27,17 @@ export async function renderHoje(ctx, main, _rest, alive) {
   const kept = list.filter((b) => isLive(b) || b.effectiveStatus === 'done' || b.effectiveStatus === 'noshow');
   const upcoming = live.filter((b) => b.effectiveStatus === 'confirmed' && b.startAt + b.service.duration * 60000 > now);
   const next = upcoming[0];
+  const startedNow = !!next && now >= next.startAt;
+  const after = upcoming.find((b) => b.startAt > now && b !== next);
   const todayBlocks = blocks.filter((b) => b.day === today);
 
   const count = kept.length === 0 ? 'Nenhum atendimento hoje' : `${kept.length} ${kept.length === 1 ? 'atendimento' : 'atendimentos'} hoje`;
-  const sub = next
-    ? `Próximo às ${fmtTime(timeOf(ctx, next).minutes)}${done ? ` · ${done} ${done === 1 ? 'concluído' : 'concluídos'}` : ''}`
-    : kept.length ? 'Não há mais atendimentos por hoje.' : 'Aproveite para divulgar seu link de agendamento.';
+  const doneText = done ? ` · ${done} ${done === 1 ? 'concluído' : 'concluídos'}` : '';
+  const at = (b) => fmtTime(timeOf(ctx, b).minutes);
+  let sub;
+  if (startedNow) sub = `Em atendimento: ${next.customer.name}${after ? ` · Próxima às ${at(after)}` : ' · Último do dia'}`;
+  else if (next) sub = `Próxima às ${at(next)}${doneText}`;
+  else sub = kept.length ? 'Não há mais atendimentos por hoje.' : 'Aproveite para divulgar seu link de agendamento.';
 
   // ---- pendências
   const pendingBox = pending.length ? h('section', { 'aria-label': 'Aguardando sua aprovação' },
@@ -54,7 +59,7 @@ export async function renderHoje(ctx, main, _rest, alive) {
       }) }, 'Recusar');
       return h('div.pending-item',
         h('button.appt', { type: 'button', style: { padding: 0, minHeight: 0 }, onclick: () => bookingSheet(ctx, b, { onDone: reload }), 'aria-label': `Ver solicitação de ${b.customer.name}` },
-          h('span.appt-time', fmtTime(minutes), h('small', day === today ? 'hoje' : fmtDayShort(day).split(',')[1].trim())),
+          h('span.appt-time', h('span.appt-day', day === today ? 'hoje' : fmtDayShort(day)), fmtTime(minutes)),
           h('span.appt-main', h('div.appt-name', b.customer.name), h('div.appt-sub', `${b.service.name} · ${fmtMoney(b.service.price)}`))),
         h('p.small', `Responder até ${deadline(ctx, b.expiresAt)}.`),
         h('div.pending-actions', decline, approve));
@@ -71,7 +76,7 @@ export async function renderHoje(ctx, main, _rest, alive) {
     });
     const doneBtn = h('button.btn.btn-ok', { type: 'button', onclick: () => finish('done', doneBtn) }, icon('check'), 'Concluído');
     const noShowBtn = h('button.btn', { type: 'button', onclick: () => finish('noshow', noShowBtn) }, 'Não veio');
-    nextBox = h('section', { 'aria-label': 'Próximo atendimento' },
+    nextBox = h('section', { 'aria-label': started ? 'Em atendimento' : 'Próximo atendimento' },
       h('h2', started ? 'Em atendimento' : 'Próximo atendimento'),
       h('div.next',
         h('div.next-row', h('div.next-time', fmtTime(minutes)),
@@ -79,7 +84,8 @@ export async function renderHoje(ctx, main, _rest, alive) {
         h('div.next-actions',
           waButton(ctx, started ? 'owner_hello' : 'owner_reminder', next, started ? 'WhatsApp' : 'Lembrete'),
           h('button.btn', { type: 'button', onclick: () => bookingSheet(ctx, next, { onDone: reload }) }, 'Detalhes'),
-          started ? noShowBtn : null, started ? doneBtn : null)));
+          started ? noShowBtn : null, started ? doneBtn : null),
+        started && after ? h('p.next-after', `Depois: ${at(after)} · ${after.customer.name} · ${after.service.name}`) : null));
   }
 
   // ---- lista do dia (reservas e bloqueios, em ordem)
@@ -89,23 +95,27 @@ export async function renderHoje(ctx, main, _rest, alive) {
   ].sort((a, b) => a.at - b.at);
 
   const paused = ctx.settings.rules.paused;
-  mount(main,
-    h('div.today', leaf(today, { large: true, on: true }),
+  main.classList.add('view-wide');
+  const todayLeaf = leaf(today, { large: true, on: true });
+  todayLeaf.classList.add('leaf-xl');
+  mount(main, h('div.hoje', h('div.hoje-main',
+    h('div.today', todayLeaf,
       h('div.today-main', h('h1', { tabindex: '-1', class: 'sr-only' }, 'Hoje'), h('div.today-count', count), h('div.today-next', sub))),
     paused ? h('div.notice.notice-warn', icon('pause'), h('div.stack-sm.grow', h('span', h('strong', 'Agendamentos pelo link pausados. '), 'As clientes não conseguem reservar. Quem já tem horário continua com ele.'),
       h('a.btn.btn-sm', { href: '#/ajustes' }, 'Reativar em Ajustes'))) : null,
-    pendingBox,
     nextBox,
     h('div.quick',
       h('button.btn.btn-primary', { type: 'button', onclick: () => manualSheet(ctx, { day: today, onDone: reload }) }, icon('plus'), 'Nova reserva'),
-      h('button.btn', { type: 'button', onclick: () => blockSheet(ctx, { day: today, bookings: list, onDone: reload }) }, icon('ban'), 'Bloquear')),
+      h('button.btn', { type: 'button', onclick: () => blockSheet(ctx, { day: today, bookings: list, onDone: reload }) }, icon('ban'), 'Bloquear'))),
+    h('div.hoje-side',
+    pendingBox,
     h('section', { 'aria-label': 'Agenda de hoje' },
       h('div.sec-head', h('h2', 'Agenda de hoje'), h('a.btn.btn-quiet.btn-sm', { href: '#/agenda' }, 'Ver a semana')),
       rows.length
         ? h('div.plist', rows.map((r) => r.el))
         : h('div.empty.card', icon('calendar'), h('strong', 'Dia livre'), h('span', 'Nenhuma reserva para hoje até agora.'))),
     h('p.updated', `Atualizado às ${fmtTime(Math.floor(((now + ctx.settings.utcOffsetMin * 60000) % 86400000) / 60000))}`,
-      h('button.btn.btn-quiet.btn-sm', { type: 'button', onclick: reload }, icon('refresh'), 'Atualizar')));
+      h('button.btn.btn-quiet.btn-sm', { type: 'button', onclick: reload }, icon('refresh'), 'Atualizar')))));
 
   // sem servidor para avisar: o painel confere de tempos em tempos enquanto está aberto e visível
   timer = setInterval(() => {

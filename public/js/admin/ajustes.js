@@ -7,6 +7,7 @@ import { errorText } from '../ui/text.js';
 import { WEEKDAYS, dayToIso, fmtDayLong, fmtDuration, fmtMoney, fmtTime, isoToDay, parseTime } from '../core/time.js';
 import { ACCENTS, TIMEZONES } from '../core/templates.js';
 import { themeFrom } from '../core/theme.js';
+import { timeSelect } from '../ui/timeselect.js';
 import { fmtPhone } from '../core/validate.js';
 import { blockRow, blockSheet, publicUrl } from './common.js';
 
@@ -164,10 +165,10 @@ function periodsEditor(initial) {
   let periods = initial.map((p) => ({ ...p }));
   const host = h('div.periods');
   const draw = () => mount(host, periods.map((p, i) => {
-    const s = h('input.input', { type: 'time', step: '300', value: fmtTime(p.s), 'aria-label': i ? 'Volta às' : 'Abre às', onchange: (e) => { p.s = parseTime(e.target.value); } });
-    const e = h('input.input', { type: 'time', step: '300', value: fmtTime(p.e === 1440 ? 1439 : p.e), 'aria-label': i === periods.length - 1 ? 'Fecha às' : 'Pausa às', onchange: (ev) => { p.e = parseTime(ev.target.value); } });
+    const s = timeSelect({ value: p.s, label: i ? 'Volta às' : 'Abre às', onchange: (e) => { p.s = parseTime(e.target.value); } });
+    const e = timeSelect({ value: p.e, end: true, label: i === periods.length - 1 ? 'Fecha às' : 'Pausa às', onchange: (ev) => { p.e = parseTime(ev.target.value); } });
     return h('div.period', s, h('span.muted', 'às'), e,
-      periods.length > 1 ? h('button.btn.btn-quiet.btn-icon', { type: 'button', 'aria-label': 'Remover este período', onclick: () => { periods.splice(i, 1); draw(); } }, icon('trash')) : h('span'));
+      periods.length > 1 ? h('button.btn.btn-quiet.btn-icon', { type: 'button', 'aria-label': 'Remover este período', onclick: () => { periods.splice(i, 1); draw(); } }, icon('trash')) : h('span.period-spacer', { 'aria-hidden': 'true' }));
   }),
   periods.length < 3 ? h('button.btn.btn-quiet.btn-sm', { type: 'button', style: { justifySelf: 'start' }, onclick: () => { const last = periods[periods.length - 1]; const start = Math.min((last?.e ?? 720) + 60, 1380); periods.push({ s: start, e: Math.min(start + 240, 1440) }); draw(); } }, icon('plus'), 'Adicionar pausa (novo período)') : null);
   draw();

@@ -10,7 +10,7 @@ npm test
 |---|---|---|---|---|
 | Unidade (regras de negócio) | `npm run test:unit` | Node | 100 | 100 passaram |
 | Regras de segurança e fluxos de dados | `npm run test:rules` | Emulador Firestore + Auth, regras ligadas | 50 | 50 passaram |
-| Interface (demonstração) | `npm run test:e2e` | Chromium (Playwright), celular 390 px e desktop 1280 px | 36 | 36 passaram |
+| Interface (demonstração) | `npm run test:e2e` | Chromium (Playwright), celular 390 px e desktop 1280 px | 38 | 38 passaram |
 | Aplicativo real contra o emulador | `npm run test:e2e:firebase` | Chromium + SDK empacotado + emulador | 8 | 8 passaram |
 
 A suíte do emulador precisa de Java 11+. Cada execução dela grava o resultado completo em
@@ -56,17 +56,44 @@ A suíte do emulador precisa de Java 11+. Cada execução dela grava o resultado
 - Detector de padrões genéricos do impeccable: 1 aviso (listras decorativas no bloqueio) — corrigido.
 - Revisão final por um revisor independente: ver "Revisão de design" abaixo.
 
-## Ocorrência intermitente (registrada)
+## Falha intermitente investigada e corrigida
 
 Em uma execução da suíte completa, 2 testes da suíte de regras falharam ("mudar o modo de confirmação só
-afeta reservas novas" e "remarcação é atômica…"). Os detalhes da falha não foram guardados. A mesma
-suíte passou em **17 execuções seguidas**, inclusive com testes de navegador rodando em paralelo. Não foi
-possível reproduzir nem identificar a causa; como as duas falhas envolvem remarcação, o caso permanece
-**em observação**. Para não perder evidência, toda execução agora grava o log completo em
-`test-results/`.
+afeta reservas novas" e "remarcação é atômica…"). Investigação:
 
-As outras 2 falhas daquela mesma execução (testes de interface do painel) tinham causa conhecida — um
-seletor de teste quebrado pela correção de acessibilidade — e foram corrigidas.
+- os testes marcavam horários "daqui a N horas" a partir do relógio real; rodando às 14:27 de Manaus,
+  "daqui a 33 h" e "daqui a 57 h" caíam às **23:30**, e um atendimento de 45 min começando às 23:30
+  atravessaria a meia-noite — o sistema recusou, **corretamente**;
+- portanto o defeito era do **teste**, não do aplicativo. O gerador de horários dos testes
+  (`tests/rules/_helpers.mjs`) passou a usar horários de calendário fixos (08:00–19:00) e a evitar o fim
+  do dia nos casos relativos; um script conferiu os 36 valores usados em cada minuto de um dia inteiro:
+  nenhum atravessa mais a meia-noite;
+- depois da correção, a suíte passou em todas as execuções; cada execução agora guarda o log completo em
+  `test-results/`.
+
+As outras 2 falhas daquela mesma execução (interface do painel) vieram de um seletor de teste quebrado
+pela correção de acessibilidade, e foram corrigidas.
+
+## Revisão de design independente
+
+Um revisor sem acesso ao processo de construção avaliou as 28 capturas (celular e desktop) contra o
+pedido e a direção visual. Veredito: **fix**, com 7 correções materiais, todas aplicadas e cobertas por
+teste quando possível:
+
+1. "Próximo às 14:00" aparecia para quem já estava em atendimento → resumo "Em atendimento: … · Próxima
+   às 16:30" e linha "Depois: …" no cartão;
+2. linhas de horário estouravam a largura no celular → grade corrigida (teste mede o transbordo);
+3. Sábado (um período) desalinhado → espaçador fixo;
+4. campos de hora em AM/PM conforme o aparelho → listas sempre em 24 h;
+5. reserva manual oferecia horários de hoje que já passaram sem aviso → grupo separado "Já passou (para
+   registrar um atendimento)";
+6. data da solicitação pendente pequena demais (parecia ser hoje) → data com o mesmo peso do horário;
+7. nomes e textos truncados no celular → estado abaixo do nome, texto com quebra.
+
+Também aplicadas as sugestões de "teto": folha de hoje maior e tela Hoje em duas colunas no desktop.
+Não aplicado: um efeito visual de "folha destacável" na faixa de dias (o movimento de folha virada nos
+horários existe; o restante foi considerado decorativo). O detector de padrões do impeccable não aponta
+nada depois das correções.
 
 ## O que NÃO foi verificado (depende de configuração externa)
 

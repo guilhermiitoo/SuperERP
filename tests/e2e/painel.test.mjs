@@ -35,10 +35,13 @@ test('sem entrar, o painel não mostra nenhuma reserva', async () => {
 test('Hoje responde: quantos atendo, qual é o próximo e a lista em ordem', async () => {
   const { page, context, errors } = await enter();
   await page.getByText('4 atendimentos hoje').waitFor();
-  await page.getByText('Próximo às 14:00 · 2 concluídos').waitFor();
-  const section = page.getByRole('region', { name: 'Próximo atendimento' });
+  // às 14:20 a Carla (14:00) já está em atendimento: o resumo não diz "próximo às 14:00"
+  await page.getByText('Em atendimento: Carla Menezes · Próxima às 16:30').waitFor();
+  assert.equal(await page.getByText('Próximo às 14:00').count(), 0);
+  const section = page.getByRole('region', { name: 'Em atendimento' });
   await section.getByText('Carla Menezes').waitFor();
   await section.getByText('14:00').waitFor();
+  await section.getByText('Depois: 16:30 · Bianca Farias · Pé').waitFor();
   const times = await page.getByRole('region', { name: 'Agenda de hoje' }).locator('.appt-time').evaluateAll((els) => els.map((e) => e.firstChild.textContent));
   assert.deepEqual(times, ['09:00', '11:00', '14:00', '16:30']);
   const wa = await section.getByRole('link', { name: 'WhatsApp' }).getAttribute('href');
@@ -49,9 +52,10 @@ test('Hoje responde: quantos atendo, qual é o próximo e a lista em ordem', asy
 
 test('concluído, não compareceu e desfazer', async () => {
   const { page, context } = await enter();
-  await page.getByRole('region', { name: 'Próximo atendimento' }).getByRole('button', { name: 'Concluído' }).click();
+  await page.getByRole('region', { name: 'Em atendimento' }).getByRole('button', { name: 'Concluído' }).click();
   await page.getByText('Marcado como concluído.').waitFor();
-  await page.getByText('Próximo às 16:30 · 3 concluídos').waitFor();
+  await page.getByText('Próxima às 16:30 · 3 concluídos').waitFor();
+  await page.getByRole('region', { name: 'Próximo atendimento' }).getByText('Bianca Farias').waitFor();
   assert.equal((await bookingsOf(page, 'Carla Menezes'))[0].status, 'done');
   await page.getByRole('button', { name: /^14:00, Carla Menezes/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Atendimento' });
@@ -75,6 +79,8 @@ test('solicitação pendente aparece em destaque; aprovar confirma e oferece o a
   await box.getByText('Fernanda Ribeiro').waitFor();
   await page.getByLabel('2 aguardando aprovação').waitFor();
   await box.getByText(/Responder até ter\., 17\/11 às 02:20/).first().waitFor();
+  // a data da solicitação aparece com o mesmo peso do horário (não parece ser hoje)
+  await box.getByText('qua., 18/11', { exact: true }).waitFor();
 
   await box.locator('.pending-item', { hasText: 'Fernanda Ribeiro' }).getByRole('button', { name: 'Aprovar' }).click();
   const sheet = page.getByRole('dialog', { name: 'Atendimento' });
@@ -124,6 +130,29 @@ test('reserva manual usa a mesma disponibilidade do link e não deixa sobrepor',
   await context.close();
 });
 
+test('nova reserva para hoje separa os horários que já passaram', async () => {
+  const { page, context } = await enter();
+  await page.getByRole('button', { name: 'Nova reserva' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Nova reserva' });
+  await sheet.getByText('Já passou (para registrar um atendimento)').waitFor();
+  const groups = await sheet.locator('.slot-group').allTextContents();
+  assert.equal(groups[groups.length - 1], 'Já passou (para registrar um atendimento)');
+  assert.ok(!(await sheet.locator('.slots').first().locator('.slot').allTextContents()).includes('13:00'), '13:00 já passou e não aparece entre os próximos');
+  await context.close();
+});
+
+test('horários de atendimento em formato 24 h e sem estourar a tela do celular', async () => {
+  const { page, context } = await enter();
+  await page.goto(app.url + '/painel.html#/ajustes/horarios');
+  const monday = page.locator('.dayrow', { hasText: 'Segunda-feira' });
+  assert.equal(await monday.getByLabel('Abre às').evaluate((el) => el.tagName), 'SELECT');
+  assert.equal(await monday.getByLabel('Abre às').inputValue(), '09:00');
+  assert.ok((await monday.getByLabel('Fecha às').locator('option').allTextContents()).includes('18:00'));
+  const overflow = await page.evaluate(() => [...document.querySelectorAll('.dayrow')].filter((r) => r.scrollWidth > r.clientWidth + 1).length);
+  assert.equal(overflow, 0);
+  await context.close();
+});
+
 test('remarcar e cancelar pela ficha do atendimento', async () => {
   const { page, context } = await enter();
   await page.getByRole('button', { name: /^16:30, Bianca Farias/ }).click();
@@ -159,8 +188,8 @@ test('bloqueio rápido tira o horário do link e avisa sobre atendimentos no per
   await page.getByRole('button', { name: 'Bloquear' }).click();
   const sheet = page.getByRole('dialog', { name: 'Bloquear horário' });
   assert.equal(await sheet.getByLabel('Dia', { exact: true }).inputValue(), '2026-11-18');
-  await sheet.getByLabel('Das').fill('09:00');
-  await sheet.getByLabel('Até').fill('12:00');
+  await sheet.getByLabel('Das').selectOption('09:00');
+  await sheet.getByLabel('Até').selectOption('12:00');
   await sheet.getByText(/Há 1 atendimento marcado neste período \(Luana Peixoto\)/).waitFor();
   await sheet.getByLabel('Anotação').fill('consulta (fictício)');
   await sheet.getByRole('button', { name: 'Bloquear' }).click();

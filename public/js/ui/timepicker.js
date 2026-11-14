@@ -2,7 +2,7 @@
 import { h, mount } from './dom.js';
 import { icon } from './icons.js';
 import { leaf } from './leaf.js';
-import { addDays, fmtDayLong, fmtDayShort } from '../core/time.js';
+import { addDays, fmtDayLong, fmtDayShort, instantOf } from '../core/time.js';
 import { lastPublicDay, listSlots, todayOf } from '../core/schedule.js';
 
 const FIRST_CHUNK = 14;
@@ -106,10 +106,14 @@ export function timePicker(o) {
     const doc = st.days[st.day];
     let body;
     if (slots.length) {
+      const nowMs = o.store.now();
+      const past = slots.filter((s) => instantOf(st.day, s.minutes, offset) < nowMs);
+      const ahead = slots.filter((s) => !past.includes(s));
       body = h('div.stack.flip-in', { key: st.day },
-        group('Manhã', slots.filter((s) => s.minutes < 720)),
-        group('Tarde', slots.filter((s) => s.minutes >= 720 && s.minutes < 1080)),
-        group('Noite', slots.filter((s) => s.minutes >= 1080)));
+        group('Manhã', ahead.filter((s) => s.minutes < 720)),
+        group('Tarde', ahead.filter((s) => s.minutes >= 720 && s.minutes < 1080)),
+        group('Noite', ahead.filter((s) => s.minutes >= 1080)),
+        past.length ? h('div.slots-past', group('Já passou (para registrar um atendimento)', past)) : null);
     } else {
       const next = firstOpenAfter(st.day);
       const closed = !doc || doc.shut;

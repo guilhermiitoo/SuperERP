@@ -10,6 +10,7 @@ import { STATUS_LABEL, STATUS_SHORT, STATUS_CHIP, errorText } from '../ui/text.j
 import { ATOM_MIN, dayToIso, fmtDayLong, fmtDayShort, fmtMoney, fmtTime, isoToDay, localOf, parseTime } from '../core/time.js';
 import { fmtPhone, normalizeName, normalizePhone } from '../core/validate.js';
 import { waLink, messageFor } from '../core/whatsapp.js';
+import { timeSelect } from '../ui/timeselect.js';
 
 export const publicUrl = () => new URL('./', location.href).href;
 export const manageUrl = (token) => `${publicUrl()}#/r/${token}`;
@@ -42,8 +43,8 @@ export function apptRow(ctx, b, { onDone } = {}) {
     onclick: () => bookingSheet(ctx, b, { onDone }),
   }, spoken(`${fmtTime(minutes)}, ${b.customer.name}, ${b.service.name}, ${STATUS_LABEL[state]}`,
     h('span.appt-time', fmtTime(minutes), h('small', fmtTime(minutes + b.service.duration))),
-    h('span.appt-main', h('div.appt-name', b.customer.name), h('div.appt-sub', b.service.name)),
-    state === 'confirmed' ? null : h(`span.chip.${STATUS_CHIP[state]}`, STATUS_SHORT[state]),
+    h('span.appt-main', h('div.appt-name', b.customer.name), h('div.appt-sub', b.service.name),
+      state === 'confirmed' ? null : h(`span.chip.${STATUS_CHIP[state]}`, STATUS_SHORT[state])),
     icon('right')));
 }
 
@@ -263,8 +264,8 @@ export function blockSheet(ctx, { day, bookings = [], onDone } = {}) {
   let sheet;
   const date = h('input.input', { type: 'date', value: dayToIso(day || ctx.today()), min: dayToIso(ctx.today()), required: true });
   const allDay = h('input', { type: 'checkbox' });
-  const from = h('input.input', { type: 'time', value: '12:00', step: '300' });
-  const to = h('input.input', { type: 'time', value: '13:00', step: '300' });
+  const from = timeSelect({ value: 720 });
+  const to = timeSelect({ value: 780, end: true });
   const note = h('input.input', { type: 'text', maxlength: '80', placeholder: 'Opcional. Só você vê.', autocomplete: 'off' });
   const times = h('div.grid-2', field({ label: 'Das', control: from }), field({ label: 'Até', control: to }));
   const warn = h('div.notice.notice-warn', { role: 'status', hidden: true });

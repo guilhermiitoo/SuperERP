@@ -67,8 +67,8 @@ export async function renderClientes(ctx, main, _rest, alive) {
     return mount(listEl, h('p.small.muted', { 'aria-live': 'polite' }, `${found.length} ${found.length === 1 ? 'cliente' : 'clientes'}`),
       h('div.plist', found.map((c) => h('button.appt', { type: 'button', onclick: () => open(c) },
         h('span.appt-main', h('div.appt-name', c.name),
-          h('div.appt-sub', `${fmtPhone(c.phone)} · ${c.visits === 0 ? 'ainda sem atendimento' : c.visits === 1 ? '1 atendimento' : `${c.visits} atendimentos`}`)),
-        c.next ? h('span.chip.chip-ok', 'Tem horário') : null, icon('right')))));
+          h('div.appt-sub.wrap', `${fmtPhone(c.phone)} · ${c.visits === 0 ? 'sem atendimentos' : c.visits === 1 ? '1 atendimento' : `${c.visits} atendimentos`}`),
+          c.next ? h('span.chip.chip-ok', 'Tem horário') : null), icon('right')))));
   }
 
   const search = h('input.input', { type: 'search', placeholder: 'Nome ou telefone', value: query, 'aria-label': 'Buscar cliente por nome ou telefone', autocomplete: 'off', oninput: (e) => { query = e.target.value; draw(); } });

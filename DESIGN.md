@@ -18,6 +18,9 @@ colors:
   warn-soft: "oklch(95.5% 0.045 85)"
   danger: "oklch(47% 0.16 27)"
   danger-soft: "oklch(96% 0.025 27)"
+  ok-ink: "oklch(32% 0.08 155)"
+  warn-ink: "oklch(33% 0.08 65)"
+  danger-ink: "oklch(36% 0.13 27)"
 typography:
   numeral-display:
     fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
@@ -51,15 +54,70 @@ typography:
     fontSize: "0.9375rem"
     fontWeight: 650
     lineHeight: 1.3
+  numeral-xl:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "4.6rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-lg:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "3.6rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-leaf-lg:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "3.1rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-leaf:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "2.05rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-ticket:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "2rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-leaf-week:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "1.7rem"
+    fontWeight: 800
+    lineHeight: 1
+  numeral-row:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "1.5rem"
+    fontWeight: 800
+    lineHeight: 1
+  topbar-name:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "1.4rem"
+    fontWeight: 800
+  numeral-slot:
+    fontFamily: "Sofia Sans Condensed, Sofia Sans, system-ui, sans-serif"
+    fontSize: "1.35rem"
+    fontWeight: 750
+  leaf-band-lg:
+    fontFamily: "Sofia Sans, system-ui, sans-serif"
+    fontSize: "0.9rem"
+    fontWeight: 750
+    letterSpacing: "0.07em"
+  leaf-band-md:
+    fontFamily: "Sofia Sans, system-ui, sans-serif"
+    fontSize: "0.8rem"
+    fontWeight: 750
+    letterSpacing: "0.07em"
   leaf-band:
     fontFamily: "Sofia Sans, system-ui, sans-serif"
     fontSize: "0.72rem"
     fontWeight: 750
     letterSpacing: "0.07em"
 rounded:
+  xs: "3px"
   sm: "4px"
   md: "7px"
   lg: "12px"
+  pill: "999px"
 spacing:
   s-1: "4px"
   s-2: "8px"
@@ -160,6 +218,8 @@ Neutros quentes derivados do matiz 12–15 (rosado) e um único destaque configu
 - **Confirmado** (oklch(43% 0.1 155) sobre oklch(95.5% 0.035 155)).
 - **Aguardando** (oklch(45% 0.1 65) sobre oklch(95.5% 0.045 85)) — pendências de aprovação.
 - **Perigo** (oklch(47% 0.16 27) sobre oklch(96% 0.025 27)) — cancelar, erros, sem conexão grave.
+- **Tintas de aviso** (ok-ink, warn-ink, danger-ink): versões mais escuras de cada estado para o texto
+  dentro das caixas de aviso, garantindo contraste AA sobre o fundo claro do próprio estado.
 
 ### Named Rules
 **The One Ink Rule.** Só existe uma cor de marca por instalação. Nenhuma tela introduz um segundo
